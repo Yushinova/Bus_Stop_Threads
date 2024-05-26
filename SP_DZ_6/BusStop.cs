@@ -12,50 +12,37 @@ namespace SP_DZ_6
         public int CountPeople { get; set; }
         public Random random = new Random();
         public Bus bus { get; set; }
-        Mutex mutex = new Mutex();
+        ManualResetEvent evtObj = new ManualResetEvent(true);
         public void PeopleCame()//приход людей на остановку. Ограничеваем доступ 
         {
-            while (bus.CountBusTrips!=0)
+            while (bus.CountBusTrips != 0)
             {
-                try
-                {
-                    mutex.WaitOne();
-                    if(bus.CountBusTrips > 0) CountPeople += random.Next(1, 15);
+
+                    if (bus.CountBusTrips > 0) CountPeople += random.Next(5, 15);
                     Console.WriteLine($"-----------На остановке ожидают {CountPeople} человек");
                     Task.Delay(2000);
-                }
-             finally
-                {
-                    mutex.ReleaseMutex();
-                }
+                    evtObj.Reset();
+                    evtObj.WaitOne();
             }
             Console.WriteLine($"День закончен! Количество оставшихся людей на остановке {CountPeople}");
             Console.ReadKey();
         }
         public void GoBus()//движение автобуса по кругу
         {
-
             do
-            {
-                try
-                {
-                    mutex.WaitOne();
-                    Task.Delay(2000).Wait();
-                    Console.WriteLine($"{bus.BusName} едет.......Всего {bus.FactNumber} человек в автобусе");          
-                    Console.WriteLine($"{bus.BusName} подъехал к остановке.....");
-                    int happy = bus.HappyPeople(CountPeople);
-                    Console.WriteLine($"В автобус {bus.BusName} сели {happy} человек");
-                    CountPeople -= happy;//убираем тех кто поместился в автобус
-                    Task.Delay(1000).Wait();
-                    int goAway = bus.GoAwayPeople();
-                    Console.WriteLine($"На следующей остановке из автобуса {bus.BusName} вышли {goAway} человек");
-                    bus.CountBusTrips--;
-                }
-               finally
-                {
-                    mutex.ReleaseMutex();
-                }
-
+            {               
+                Task.Delay(2000).Wait();
+                Console.WriteLine($"{bus.BusName} едет.......Всего {bus.FactNumber} человек в автобусе");
+                Console.WriteLine($"{bus.BusName} подъехал к остановке.....");
+                int happy = bus.HappyPeople(CountPeople);
+                Console.WriteLine($"В автобус {bus.BusName} сели {happy} человек");
+                CountPeople -= happy;//убираем тех кто поместился в автобус
+                Task.Delay(1000).Wait();
+                int goAway = bus.GoAwayPeople();
+                Console.WriteLine($"На следующей остановке из автобуса {bus.BusName} вышли {goAway} человек");
+                bus.CountBusTrips--;
+                evtObj.Set();
+  
             } while (bus.CountBusTrips != 0);
         }
         public void DayStart()
